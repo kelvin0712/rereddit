@@ -8,6 +8,10 @@ import { buildSchema } from "type-graphql";
 import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
+import redis from "redis";
+import session from "express-session";
+import connectRedis from "connect-redis";
+import { MyContext } from "./types";
 
 const main = async () => {
   // Connect to the database
@@ -17,13 +21,36 @@ const main = async () => {
 
   const app = express();
 
+  // Create redis connection
+  const redisClient = redis.createClient({
+    host: "0.0.0.0",
+    port: 6379,
+  });
+  const RedisStore = connectRedis(session);
+
+  app.use(
+    session({
+      name: "qid",
+      store: new RedisStore({ client: redisClient, disableTouch: true }),
+      cookie: {
+        maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // 10 years
+        httpOnly: true,
+        secure: __prod__, // cookie only works in https
+        sameSite: "lax",
+      },
+      saveUninitialized: false,
+      secret: "Thisfdsajklfjdlsajiwrejfkdlsjflkdsjalkj",
+      resave: false,
+    })
+  );
+
   // Create Apollo server
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,
     }),
-    context: () => ({ em: orm.em }),
+    context: ({ req, res }: MyContext) => ({ em: orm.em, req, res }),
   });
 
   // Create a graphql end point on express
