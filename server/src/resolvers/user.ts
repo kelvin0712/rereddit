@@ -11,6 +11,7 @@ import {
 } from "type-graphql";
 import argon2 from "argon2";
 import { User } from "../entities/User";
+import { EntityManager } from "@mikro-orm/postgresql";
 
 // Create type for params
 @InputType()
@@ -57,23 +58,45 @@ export class UserResolver {
     @Arg("options") options: UsernamePasswordInput,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
-    if (options.password.length <= 2 || options.username.length <= 2) {
+    if (options.password.length <= 2) {
       return {
         errors: [
           {
-            field: "password or username",
-            message: "password or username is too short.",
+            field: "password",
+            message: "password is too short.",
           },
         ],
       };
     }
+
+    if (options.username.length <= 2) {
+      return {
+        errors: [
+          {
+            field: "username",
+            message: "username is too short",
+          },
+        ],
+      };
+    }
+
     const hashedPassword = await argon2.hash(options.password);
-    const user = em.create(User, {
-      username: options.username,
-      password: hashedPassword,
-    });
+
+    let user;
     try {
-      await em.persistAndFlush(user);
+      // Create user and save user to the database
+      const result = await (em as EntityManager)
+        .createQueryBuilder(User)
+        .getKnexQuery()
+        .insert({
+          username: options.username,
+          password: hashedPassword,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .returning("*");
+
+      user = result[0];
     } catch (err) {
       if (err.code === "23505") {
         return {
