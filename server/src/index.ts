@@ -12,6 +12,7 @@ import redis from "redis";
 import session from "express-session";
 import connectRedis from "connect-redis";
 import { MyContext } from "./types";
+import cors from "cors";
 
 const main = async () => {
   // Connect to the database
@@ -28,6 +29,15 @@ const main = async () => {
   });
   const RedisStore = connectRedis(session);
 
+  // Apply cors globally
+  app.use(
+    cors({
+      credentials: true,
+      origin: "http://localhost:3000",
+    })
+  );
+
+  // Set up express session to store cookie in the browser
   app.use(
     session({
       name: "qid",
@@ -54,7 +64,7 @@ const main = async () => {
   });
 
   // Create a graphql end point on express
-  apolloServer.applyMiddleware({ app });
+  apolloServer.applyMiddleware({ app, cors: false });
 
   app.listen(4000, () => {
     console.log("Server started on localhost:4000");
