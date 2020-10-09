@@ -1,9 +1,10 @@
 import { Flex, Box, Link, Button } from "@chakra-ui/core";
 import NextLink from "next/link";
-import { useMeQuery } from "../generated/graphql";
+import { useMeQuery, useLogoutMutation } from "../generated/graphql";
 
 const NavBar = () => {
   const [{ data, fetching }] = useMeQuery();
+  const [{ fetching: logoutFetching }, logout] = useLogoutMutation();
 
   let body;
 
@@ -27,7 +28,13 @@ const NavBar = () => {
           {data.me.username}
         </Link>
         <Link color="white">
-          <Button variant="link">Logout</Button>
+          <Button
+            variant="link"
+            isLoading={logoutFetching}
+            onClick={() => logout()}
+          >
+            Logout
+          </Button>
         </Link>
       </Box>
     );
