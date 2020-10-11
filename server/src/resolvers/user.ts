@@ -3,7 +3,6 @@ import {
   Arg,
   Ctx,
   Field,
-  InputType,
   Mutation,
   ObjectType,
   Query,
@@ -12,16 +11,9 @@ import {
 import argon2 from "argon2";
 import { User } from "../entities/User";
 import { EntityManager } from "@mikro-orm/postgresql";
-import { COOKIE_NAME } from "src/constants";
-
-// Create type for params
-@InputType()
-class UsernamePasswordInput {
-  @Field()
-  username: string;
-  @Field()
-  password: string;
-}
+import { COOKIE_NAME } from "../constants";
+import { UsernamePasswordInput } from "./UsernamePasswordInput";
+import { validRegister } from "../utils/validateRegister";
 
 //Create type for errors
 @ObjectType()
@@ -59,28 +51,14 @@ export class UserResolver {
     @Arg("options") options: UsernamePasswordInput,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
-    if (options.password.length <= 2) {
-      return {
-        errors: [
-          {
-            field: "password",
-            message: "password is too short.",
-          },
-        ],
-      };
+    // Validation
+    const errors = validRegister(options);
+
+    if (errors) {
+      return { errors };
     }
 
-    if (options.username.length <= 2) {
-      return {
-        errors: [
-          {
-            field: "username",
-            message: "username is too short",
-          },
-        ],
-      };
-    }
-
+    // Hashing password
     const hashedPassword = await argon2.hash(options.password);
 
     let user;
@@ -92,6 +70,7 @@ export class UserResolver {
         .insert({
           username: options.username,
           password: hashedPassword,
+          email: options.email,
           created_at: new Date(),
           updated_at: new Date(),
         })
@@ -124,28 +103,37 @@ export class UserResolver {
   // Create login function
   @Mutation(() => UserResponse)
   async login(
-    @Arg("options") options: UsernamePasswordInput,
+    @Arg("usernameOrEmail") usernameOrEmail: string,
+    @Arg("password") password: string,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
+    // Validation
+
     // Find a user
-    const user = await em.findOne(User, { username: options.username });
+    const user = await em.findOne(
+      User,
+      usernameOrEmail.includes("@")
+        ? { email: usernameOrEmail }
+        : { username: usernameOrEmail }
+    );
+
     if (!user) {
       return {
         errors: [
           {
-            field: "username",
-            message: "That username does not exist!",
+            field: "usernameOrEmail",
+            message: "That username or email does not exist!",
           },
         ],
       };
     }
     // if there is a user verify the userpassword
-    const valid = await argon2.verify(user.password, options.password);
+    const valid = await argon2.verify(user.password, password);
     if (!valid) {
       return {
         errors: [
           {
-            field: "username",
+            field: "password",
             message: "Incorrect password",
           },
         ],

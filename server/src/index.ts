@@ -17,6 +17,7 @@ import cors from "cors";
 const main = async () => {
   // Connect to the database
   const orm = await MikroORM.init(mikroConfig);
+
   // Run migration
   await orm.getMigrator().up();
 
