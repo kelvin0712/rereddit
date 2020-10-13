@@ -10,12 +10,12 @@ import {
 } from "type-graphql";
 import argon2 from "argon2";
 import { User } from "../entities/User";
-import { EntityManager } from "@mikro-orm/postgresql";
 import { COOKIE_NAME, FORGET_PASSWORD_PREFIX } from "../constants";
 import { UsernamePasswordInput } from "./UsernamePasswordInput";
 import { validRegister } from "../utils/validateRegister";
 import { forgetPasswordEmail } from "../utils/forgetPasswordEmail";
 import { v4 } from "uuid";
+import { getConnection } from "typeorm";
 
 //Create type for errors
 @ObjectType()
@@ -39,7 +39,7 @@ class UserResponse {
 export class UserResolver {
   @Mutation(() => UserResponse)
   async changePassword(
-    @Ctx() { em, redis, req }: MyContext,
+    @Ctx() { redis, req }: MyContext,
     @Arg("newPassword") newPassword: string,
     @Arg("token") token: string
   ): Promise<UserResponse> {
@@ -60,7 +60,9 @@ export class UserResolver {
         errors: [{ field: "token", message: "token expired." }],
       };
     }
-    const user = await em.findOne(User, { id: parseInt(userId) });
+
+    const id = parseInt(userId);
+    const user = await User.findOne(id);
 
     if (!user) {
       return {
@@ -73,11 +75,10 @@ export class UserResolver {
       };
     }
 
-    user.password = await argon2.hash(newPassword);
-    await em.persistAndFlush(user);
+    await User.update({ id }, { password: await argon2.hash(newPassword) });
 
     // delete the token after users changed their password
-    redis.del(FORGET_PASSWORD_PREFIX + token);
+    await redis.del(FORGET_PASSWORD_PREFIX + token);
 
     // login user after change password
 
@@ -91,10 +92,10 @@ export class UserResolver {
   // Send email to user who forget password
   @Mutation(() => Boolean)
   async forgetPassword(
-    @Ctx() { em, redis }: MyContext,
+    @Ctx() { redis }: MyContext,
     @Arg("email") email: string
   ) {
-    const user = await em.findOne(User, { email });
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       return true;
     }
@@ -120,19 +121,18 @@ export class UserResolver {
   }
   // Create query for current user
   @Query(() => User, { nullable: true })
-  async me(@Ctx() { req, em }: MyContext) {
+  me(@Ctx() { req }: MyContext) {
     // you are not logged in
     if (!req.session.userId) {
       return null;
     }
-    const user = await em.findOne(User, { id: req.session.userId });
-    return user;
+    return User.findOne(req.session.userId);
   }
   // Create register function
   @Mutation(() => UserResponse)
   async register(
     @Arg("options") options: UsernamePasswordInput,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
     // Validation
     const errors = validRegister(options);
@@ -146,20 +146,18 @@ export class UserResolver {
 
     let user;
     try {
-      // Create user and save user to the database
-      const result = await (em as EntityManager)
-        .createQueryBuilder(User)
-        .getKnexQuery()
-        .insert({
+      const result = await getConnection()
+        .createQueryBuilder()
+        .insert()
+        .into(User)
+        .values({
           username: options.username,
           password: hashedPassword,
           email: options.email,
-          created_at: new Date(),
-          updated_at: new Date(),
         })
-        .returning("*");
-
-      user = result[0];
+        .returning("*")
+        .execute();
+      user = result.raw[0];
     } catch (err) {
       if (err.code === "23505") {
         return {
@@ -188,16 +186,15 @@ export class UserResolver {
   async login(
     @Arg("usernameOrEmail") usernameOrEmail: string,
     @Arg("password") password: string,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
     // Validation
 
     // Find a user
-    const user = await em.findOne(
-      User,
+    const user = await User.findOne(
       usernameOrEmail.includes("@")
-        ? { email: usernameOrEmail }
-        : { username: usernameOrEmail }
+        ? { where: { email: usernameOrEmail } }
+        : { where: { username: usernameOrEmail } }
     );
 
     if (!user) {
@@ -233,7 +230,7 @@ export class UserResolver {
   // Logout function
   @Mutation(() => Boolean)
   logout(@Ctx() { req, res }: MyContext) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       return req.session.destroy((err) => {
         if (err) {
           console.log(err);
