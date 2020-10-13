@@ -4,8 +4,7 @@ mutation Login($usernameOrEmail: String!, $password: String!) {
       ...userFragment
     }
     errors {
-      field
-      message
+      ...errorFragment
     }
   }
 }

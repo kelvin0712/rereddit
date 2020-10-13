@@ -31,6 +31,8 @@ const User_1 = require("../entities/User");
 const constants_1 = require("../constants");
 const UsernamePasswordInput_1 = require("./UsernamePasswordInput");
 const validateRegister_1 = require("../utils/validateRegister");
+const forgetPasswordEmail_1 = require("../utils/forgetPasswordEmail");
+const uuid_1 = require("uuid");
 let FieldError = class FieldError {
 };
 __decorate([
@@ -58,6 +60,56 @@ UserResponse = __decorate([
     type_graphql_1.ObjectType()
 ], UserResponse);
 let UserResolver = class UserResolver {
+    changePassword({ em, redis, req }, newPassword, token) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (newPassword.length <= 2) {
+                return {
+                    errors: [
+                        {
+                            field: "newPassword",
+                            message: "password length must be more than 2 characters.",
+                        },
+                    ],
+                };
+            }
+            const userId = yield redis.get(constants_1.FORGET_PASSWORD_PREFIX + token);
+            if (!userId) {
+                return {
+                    errors: [{ field: "token", message: "token expired." }],
+                };
+            }
+            const user = yield em.findOne(User_1.User, { id: parseInt(userId) });
+            if (!user) {
+                return {
+                    errors: [
+                        {
+                            field: "token",
+                            message: "user no longer exists.",
+                        },
+                    ],
+                };
+            }
+            user.password = yield argon2_1.default.hash(newPassword);
+            yield em.persistAndFlush(user);
+            redis.del(constants_1.FORGET_PASSWORD_PREFIX + token);
+            req.session.userId = user.id;
+            return {
+                user,
+            };
+        });
+    }
+    forgetPassword({ em, redis }, email) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield em.findOne(User_1.User, { email });
+            if (!user) {
+                return true;
+            }
+            const token = uuid_1.v4();
+            yield redis.set(constants_1.FORGET_PASSWORD_PREFIX + token, user.id, "ex", 1000 * 60 * 60 * 24 * 3);
+            yield forgetPasswordEmail_1.forgetPasswordEmail(email, `<a href="http://localhost:3000/change-password/${token}">Reset password</a>`);
+            return true;
+        });
+    }
     me({ req, em }) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!req.session.userId) {
@@ -152,6 +204,23 @@ let UserResolver = class UserResolver {
         });
     }
 };
+__decorate([
+    type_graphql_1.Mutation(() => UserResponse),
+    __param(0, type_graphql_1.Ctx()),
+    __param(1, type_graphql_1.Arg("newPassword")),
+    __param(2, type_graphql_1.Arg("token")),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], UserResolver.prototype, "changePassword", null);
+__decorate([
+    type_graphql_1.Mutation(() => Boolean),
+    __param(0, type_graphql_1.Ctx()),
+    __param(1, type_graphql_1.Arg("email")),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], UserResolver.prototype, "forgetPassword", null);
 __decorate([
     type_graphql_1.Query(() => User_1.User, { nullable: true }),
     __param(0, type_graphql_1.Ctx()),
