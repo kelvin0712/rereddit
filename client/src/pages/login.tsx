@@ -12,6 +12,7 @@ import Layout from "../components/Layout";
 const Login: React.FC<{}> = () => {
   const [, login] = useLoginMutation();
   const router = useRouter();
+  console.log(router);
   return (
     <Formik
       initialValues={{ usernameOrEmail: "", password: "" }}
@@ -21,7 +22,11 @@ const Login: React.FC<{}> = () => {
           if (response.data?.login.errors) {
             setErrors(toErrorMap(response.data.login.errors));
           } else if (response.data?.login.user) {
-            router.push("/");
+            if (typeof router.query.next === "string") {
+              router.push(router.query.next);
+            } else {
+              router.push("/");
+            }
           }
         } catch (err) {
           console.log(err);
