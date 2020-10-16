@@ -3,14 +3,18 @@ import {
   Arg,
   Ctx,
   Field,
+  FieldResolver,
   InputType,
+  Int,
   Mutation,
   Query,
   Resolver,
+  Root,
   UseMiddleware,
 } from "type-graphql";
 import { MyContext } from "../types";
 import { isAuth } from "../middlewares/isAuth";
+import { getConnection } from "typeorm";
 
 @InputType()
 class PostInput {
@@ -20,13 +24,32 @@ class PostInput {
   text: string;
 }
 
-@Resolver()
+@Resolver(Post)
 export class PostResolver {
+  // Field Resolver for field text in Post
+  @FieldResolver(() => String)
+  textSnippet(@Root() post: Post) {
+    return post.text.slice(0, 50);
+  }
   // Query all posts
   // return: an array of posts
   @Query(() => [Post])
-  posts(): Promise<Post[]> {
-    return Post.find();
+  posts(
+    @Arg("limit", () => Int) limit: number,
+    @Arg("cursor", () => String, { nullable: true }) cursor: string
+  ): Promise<Post[]> {
+    const realLimit = Math.min(50, limit);
+    const getPosts = getConnection()
+      .getRepository(Post)
+      .createQueryBuilder("p")
+      .take(realLimit)
+      .orderBy('"createdAt"', "DESC");
+    if (cursor) {
+      getPosts.where('"createdAt" < :cursor', {
+        cursor: new Date(parseInt(cursor)),
+      });
+    }
+    return getPosts.getMany();
   }
 
   // Query a single post
