@@ -61,6 +61,12 @@ UserResponse = __decorate([
     type_graphql_1.ObjectType()
 ], UserResponse);
 let UserResolver = class UserResolver {
+    email(user, { req }) {
+        if (user.id === req.session.userId) {
+            return user.email;
+        }
+        return "";
+    }
     changePassword({ redis, req }, newPassword, token) {
         return __awaiter(this, void 0, void 0, function* () {
             if (newPassword.length <= 2) {
@@ -203,6 +209,13 @@ let UserResolver = class UserResolver {
     }
 };
 __decorate([
+    type_graphql_1.FieldResolver(() => String),
+    __param(0, type_graphql_1.Root()), __param(1, type_graphql_1.Ctx()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [User_1.User, Object]),
+    __metadata("design:returntype", void 0)
+], UserResolver.prototype, "email", null);
+__decorate([
     type_graphql_1.Mutation(() => UserResponse),
     __param(0, type_graphql_1.Ctx()),
     __param(1, type_graphql_1.Arg("newPassword")),
@@ -251,7 +264,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UserResolver.prototype, "logout", null);
 UserResolver = __decorate([
-    type_graphql_1.Resolver()
+    type_graphql_1.Resolver(User_1.User)
 ], UserResolver);
 exports.UserResolver = UserResolver;
 //# sourceMappingURL=user.js.map

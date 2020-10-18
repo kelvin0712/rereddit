@@ -29,7 +29,7 @@ const User_1 = require("./entities/User");
 const Post_1 = require("./entities/Post");
 const path_1 = __importDefault(require("path"));
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
-    typeorm_1.createConnection({
+    const conn = yield typeorm_1.createConnection({
         type: "postgres",
         database: "reredis2",
         username: "postgres",
@@ -40,6 +40,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         port: 5433,
         entities: [User_1.User, Post_1.Post],
     });
+    yield conn.runMigrations();
     const app = express_1.default();
     const redis = new ioredis_1.default({
         host: "0.0.0.0",

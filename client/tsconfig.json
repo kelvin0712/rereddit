@@ -16,6 +16,11 @@
     "isolatedModules": true,
     "jsx": "preserve"
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "../server/src/migrations/1602844995549-RealPosts.ts"
+  ],
   "exclude": ["node_modules"]
 }

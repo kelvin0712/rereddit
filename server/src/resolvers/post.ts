@@ -7,6 +7,7 @@ import {
   InputType,
   Int,
   Mutation,
+  ObjectType,
   Query,
   Resolver,
   Root,
@@ -24,6 +25,14 @@ class PostInput {
   text: string;
 }
 
+@ObjectType()
+class PaginatedPosts {
+  @Field(() => [Post])
+  posts: Post[];
+  @Field()
+  hasMore: boolean;
+}
+
 @Resolver(Post)
 export class PostResolver {
   // Field Resolver for field text in Post
@@ -33,23 +42,41 @@ export class PostResolver {
   }
   // Query all posts
   // return: an array of posts
-  @Query(() => [Post])
-  posts(
+  @Query(() => PaginatedPosts)
+  async posts(
     @Arg("limit", () => Int) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string
-  ): Promise<Post[]> {
+  ): Promise<PaginatedPosts> {
     const realLimit = Math.min(50, limit);
-    const getPosts = getConnection()
-      .getRepository(Post)
-      .createQueryBuilder("p")
-      .take(realLimit)
-      .orderBy('"createdAt"', "DESC");
+    const realLimitPlusOne = realLimit + 1;
+
+    const replacement: any[] = [realLimitPlusOne];
     if (cursor) {
-      getPosts.where('"createdAt" < :cursor', {
-        cursor: new Date(parseInt(cursor)),
-      });
+      replacement.push(new Date(parseInt(cursor)));
     }
-    return getPosts.getMany();
+    const posts = await getConnection().query(
+      `
+      select p.*,
+      json_build_object(
+        'id', u.id,
+        'username', u.username,
+        'email', u.email,
+        'createdAt', u."createdAt",
+        'updatedAt', u."updatedAt" 
+      ) creator
+      from post p 
+      inner join public.user u on u.id = p."creatorId"
+      ${cursor ? `where p."createdAt" < $2` : ""}
+      order by p."createdAt" DESC
+      limit $1
+    `,
+      replacement
+    );
+
+    return {
+      posts: posts.slice(0, realLimit),
+      hasMore: posts.length === realLimitPlusOne,
+    };
   }
 
   // Query a single post

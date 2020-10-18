@@ -17,7 +17,7 @@ import { Post } from "./entities/Post";
 import path from "path";
 
 const main = async () => {
-  createConnection({
+  const conn = await createConnection({
     type: "postgres",
     database: "reredis2",
     username: "postgres",
@@ -28,6 +28,10 @@ const main = async () => {
     port: 5433,
     entities: [User, Post],
   });
+
+  // run
+  await conn.runMigrations();
+  // Post.delete({});
 
   const app = express();
 

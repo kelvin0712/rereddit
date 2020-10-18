@@ -8,13 +8,17 @@ import { useState } from "react";
 
 const Index = () => {
   const [variables, setVariables] = useState({
-    limit: 10,
+    limit: 40,
     cursor: null as null | string,
   });
 
   const [{ data, fetching }] = usePostsQuery({
     variables,
   });
+
+  if (!data && !fetching) {
+    return <div>There is something wrong with ur query!</div>;
+  }
 
   return (
     <Layout>
@@ -29,7 +33,7 @@ const Index = () => {
       ) : (
         <>
           <Stack spacing={8}>
-            {data?.posts.map((post) => (
+            {data?.posts.posts?.map((post) => (
               <Box
                 p={5}
                 shadow="md"
@@ -45,13 +49,13 @@ const Index = () => {
           </Stack>
         </>
       )}
-      {data ? (
+      {data && data.posts.hasMore ? (
         <Flex marginY={8} justifyContent="center">
           <Button
             onClick={() =>
               setVariables({
-                limit: 10,
-                cursor: data.posts[data.posts.length - 1].createdAt,
+                limit: 40,
+                cursor: data.posts.posts[data.posts.posts.length - 1].createdAt,
               })
             }
             isLoading={fetching}
