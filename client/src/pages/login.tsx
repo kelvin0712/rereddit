@@ -12,7 +12,6 @@ import Layout from "../components/Layout";
 const Login: React.FC<{}> = () => {
   const [, login] = useLoginMutation();
   const router = useRouter();
-  console.log(router);
   return (
     <Formik
       initialValues={{ usernameOrEmail: "", password: "" }}

@@ -5,10 +5,11 @@ import { createUrqlClient } from "../utils/createUrqlClient";
 import NextLink from "next/link";
 import Layout from "../components/Layout";
 import { useState } from "react";
+import Post from "../components/Post";
 
 const Index = () => {
   const [variables, setVariables] = useState({
-    limit: 40,
+    limit: 10,
     cursor: null as null | string,
   });
 
@@ -34,17 +35,7 @@ const Index = () => {
         <>
           <Stack spacing={8}>
             {data?.posts.posts?.map((post) => (
-              <Box
-                p={5}
-                shadow="md"
-                borderWidth="1px"
-                flex="1"
-                rounded="md"
-                key={post.id}
-              >
-                <Heading fontSize="xl">{post.title}</Heading>
-                <Text mt={4}>{post.textSnippet}</Text>
-              </Box>
+              <Post post={post} key={post.id} />
             ))}
           </Stack>
         </>
@@ -54,7 +45,7 @@ const Index = () => {
           <Button
             onClick={() =>
               setVariables({
-                limit: 40,
+                limit: 10,
                 cursor: data.posts.posts[data.posts.posts.length - 1].createdAt,
               })
             }

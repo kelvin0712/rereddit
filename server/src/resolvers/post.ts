@@ -40,6 +40,31 @@ export class PostResolver {
   textSnippet(@Root() post: Post) {
     return post.text.slice(0, 50);
   }
+
+  // Updoot mutation
+  @Mutation(() => Boolean)
+  async vote(
+    @Arg("postId", () => Int) postId: number,
+    @Arg("value", () => Int) value: number,
+    @Ctx() { req }: MyContext
+  ) {
+    const isUpdoot = value !== -1;
+    const realValue = isUpdoot ? 1 : -1;
+    const { userId } = req.session;
+    await getConnection().query(`
+      START TRANSACTION;
+      insert into updoot ("userId", "postId", value) 
+      values (${userId}, ${postId}, ${realValue});
+
+      update post 
+      set point = point + ${realValue}
+      where id = ${postId};
+      
+      COMMIT;
+    `);
+
+    return true;
+  }
   // Query all posts
   // return: an array of posts
   @Query(() => PaginatedPosts)
