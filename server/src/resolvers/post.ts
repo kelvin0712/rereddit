@@ -16,6 +16,7 @@ import {
 import { MyContext } from "../types";
 import { isAuth } from "../middlewares/isAuth";
 import { getConnection } from "typeorm";
+import { Updoot } from "../entities/Updoot";
 
 @InputType()
 class PostInput {
@@ -43,6 +44,7 @@ export class PostResolver {
 
   // Updoot mutation
   @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
   async vote(
     @Arg("postId", () => Int) postId: number,
     @Arg("value", () => Int) value: number,
@@ -51,18 +53,38 @@ export class PostResolver {
     const isUpdoot = value !== -1;
     const realValue = isUpdoot ? 1 : -1;
     const { userId } = req.session;
-    await getConnection().query(`
-      START TRANSACTION;
+    console.log(realValue);
+    const updoot = await Updoot.findOne({ where: { postId, userId } });
+    console.log(updoot?.value);
+    if (updoot && updoot.value !== realValue) {
+      await getConnection().transaction(async (tm) => {
+        await tm.query(
+          `
+          update updoot 
+          set value = $1 
+          where "postId" = $2 and "userId" = $3
+        `,
+          [realValue, postId, userId]
+        );
+        await tm.query(`
+          update post 
+          set point = point +  2 * ${realValue}
+          where id = ${postId}
+        `);
+      });
+    } else if (!updoot) {
+      await getConnection().transaction(async (tm) => {
+        await tm.query(`
       insert into updoot ("userId", "postId", value) 
       values (${userId}, ${postId}, ${realValue});
-
-      update post 
-      set point = point + ${realValue}
-      where id = ${postId};
-      
-      COMMIT;
-    `);
-
+        `);
+        await tm.query(`
+          update post 
+          set point = point + ${realValue}
+          where id = ${postId}
+        `);
+      });
+    }
     return true;
   }
   // Query all posts

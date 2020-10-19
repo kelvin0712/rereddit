@@ -6,11 +6,13 @@ import {
   MeDocument,
   RegisterMutation,
   LogoutMutation,
+  VoteMutationVariables,
 } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
 import { pipe, tap } from "wonka";
 import { Exchange } from "urql";
 import Router from "next/router";
+import gql from "graphql-tag";
 
 const cursorPagination = (): Resolver => {
   return (_parent, fieldArgs, cache, info) => {
@@ -92,6 +94,30 @@ export const createUrqlClient = (ssrExchange: any) => ({
       },
       updates: {
         Mutation: {
+          vote: (_result, args, cache, info) => {
+            const { postId, value } = args as VoteMutationVariables;
+            const data = cache.readFragment(
+              gql`
+                fragment _ on Post {
+                  id
+                  point
+                }
+              `,
+              { id: postId } as any
+            );
+            console.log(data);
+            if (data) {
+              const newPoint = (data.point as number) + value;
+              cache.writeFragment(
+                gql`
+                  fragment newpoint on Post {
+                    point
+                  }
+                `,
+                { id: postId, point: newPoint } as any
+              );
+            }
+          },
           createPost: (_result, args, cache, info) => {
             const allFields = cache.inspectFields("Query");
             // Filter the queries that we dont need

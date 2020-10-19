@@ -26,6 +26,7 @@ const Post_1 = require("../entities/Post");
 const type_graphql_1 = require("type-graphql");
 const isAuth_1 = require("../middlewares/isAuth");
 const typeorm_1 = require("typeorm");
+const Updoot_1 = require("../entities/Updoot");
 let PostInput = class PostInput {
 };
 __decorate([
@@ -61,17 +62,36 @@ let PostResolver = class PostResolver {
             const isUpdoot = value !== -1;
             const realValue = isUpdoot ? 1 : -1;
             const { userId } = req.session;
-            yield typeorm_1.getConnection().query(`
-      START TRANSACTION;
+            console.log(realValue);
+            const updoot = yield Updoot_1.Updoot.findOne({ where: { postId, userId } });
+            console.log(updoot === null || updoot === void 0 ? void 0 : updoot.value);
+            if (updoot && updoot.value !== realValue) {
+                yield typeorm_1.getConnection().transaction((tm) => __awaiter(this, void 0, void 0, function* () {
+                    yield tm.query(`
+          update updoot 
+          set value = $1 
+          where "postId" = $2 and "userId" = $3
+        `, [realValue, postId, userId]);
+                    yield tm.query(`
+          update post 
+          set point = point +  2 * ${realValue}
+          where id = ${postId}
+        `);
+                }));
+            }
+            else if (!updoot) {
+                yield typeorm_1.getConnection().transaction((tm) => __awaiter(this, void 0, void 0, function* () {
+                    yield tm.query(`
       insert into updoot ("userId", "postId", value) 
       values (${userId}, ${postId}, ${realValue});
-
-      update post 
-      set point = point + ${realValue}
-      where id = ${postId};
-      
-      COMMIT;
-    `);
+        `);
+                    yield tm.query(`
+          update post 
+          set point = point + ${realValue}
+          where id = ${postId}
+        `);
+                }));
+            }
             return true;
         });
     }
@@ -140,6 +160,7 @@ __decorate([
 ], PostResolver.prototype, "textSnippet", null);
 __decorate([
     type_graphql_1.Mutation(() => Boolean),
+    type_graphql_1.UseMiddleware(isAuth_1.isAuth),
     __param(0, type_graphql_1.Arg("postId", () => type_graphql_1.Int)),
     __param(1, type_graphql_1.Arg("value", () => type_graphql_1.Int)),
     __param(2, type_graphql_1.Ctx()),

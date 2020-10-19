@@ -25,11 +25,15 @@ const Post: React.FC<PostProps> = ({ post }) => {
             size="sm"
             icon="chevron-up"
             onClick={async () => {
+              if (post.point === 1) {
+                return;
+              }
               setUpdootLoading("updoot-loading");
               await vote({ value: 1, postId: post.id });
               setUpdootLoading("not-loading");
             }}
             isLoading={updootLoading === "updoot-loading"}
+            variantColor={post.point === 1 ? "green" : undefined}
           />
           {post.point}
           <IconButton
@@ -37,11 +41,15 @@ const Post: React.FC<PostProps> = ({ post }) => {
             size="sm"
             icon="chevron-down"
             onClick={async () => {
+              if (post.point === -1) {
+                return;
+              }
               setUpdootLoading("downdoot-loading");
               await vote({ value: -1, postId: post.id });
               setUpdootLoading("not-loading");
             }}
             isLoading={updootLoading === "downdoot-loading"}
+            variantColor={post.point === -1 ? "red" : undefined}
           />
         </Flex>
         <Box>
