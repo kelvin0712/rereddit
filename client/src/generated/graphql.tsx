@@ -28,7 +28,7 @@ export type QueryPostsArgs = {
 
 
 export type QueryPostArgs = {
-  id: Scalars['Float'];
+  id: Scalars['Int'];
 };
 
 export type PaginatedPosts = {
@@ -43,6 +43,7 @@ export type Post = {
   text: Scalars['String'];
   point: Scalars['Float'];
   creatorId: Scalars['Float'];
+  voteStatus?: Maybe<Scalars['Int']>;
   creator: User;
   title: Scalars['String'];
   createdAt: Scalars['String'];
@@ -85,13 +86,14 @@ export type MutationCreatePostArgs = {
 
 
 export type MutationUpdatePostArgs = {
+  text?: Maybe<Scalars['String']>;
   title?: Maybe<Scalars['String']>;
-  id: Scalars['Float'];
+  id: Scalars['Int'];
 };
 
 
 export type MutationDeletePostArgs = {
-  id: Scalars['Float'];
+  id: Scalars['Int'];
 };
 
 
@@ -191,6 +193,16 @@ export type CreatePostMutation = (
   ) }
 );
 
+export type DeletePostMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeletePostMutation = (
+  { __typename?: 'Mutation' }
+  & Pick<Mutation, 'deletePost'>
+);
+
 export type ForgetPasswordMutationVariables = Exact<{
   email: Scalars['String'];
 }>;
@@ -248,6 +260,21 @@ export type RegisterMutation = (
   ) }
 );
 
+export type UpdatePostMutationVariables = Exact<{
+  id: Scalars['Int'];
+  text?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdatePostMutation = (
+  { __typename?: 'Mutation' }
+  & { updatePost?: Maybe<(
+    { __typename?: 'Post' }
+    & Pick<Post, 'text' | 'point' | 'id' | 'title'>
+  )> }
+);
+
 export type VoteMutationVariables = Exact<{
   value: Scalars['Int'];
   postId: Scalars['Int'];
@@ -286,6 +313,23 @@ export type PostsQuery = (
       & PostFragmentFragment
     )> }
   ) }
+);
+
+export type SinglePostQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type SinglePostQuery = (
+  { __typename?: 'Query' }
+  & { post?: Maybe<(
+    { __typename?: 'Post' }
+    & Pick<Post, 'text' | 'id' | 'point' | 'title'>
+    & { creator: (
+      { __typename?: 'User' }
+      & Pick<User, 'username' | 'id'>
+    ) }
+  )> }
 );
 
 export const ErrorFragmentFragmentDoc = gql`
@@ -345,6 +389,15 @@ export const CreatePostDocument = gql`
 export function useCreatePostMutation() {
   return Urql.useMutation<CreatePostMutation, CreatePostMutationVariables>(CreatePostDocument);
 };
+export const DeletePostDocument = gql`
+    mutation DeletePost($id: Int!) {
+  deletePost(id: $id)
+}
+    `;
+
+export function useDeletePostMutation() {
+  return Urql.useMutation<DeletePostMutation, DeletePostMutationVariables>(DeletePostDocument);
+};
 export const ForgetPasswordDocument = gql`
     mutation ForgetPassword($email: String!) {
   forgetPassword(email: $email)
@@ -397,6 +450,20 @@ ${UserFragmentFragmentDoc}`;
 export function useRegisterMutation() {
   return Urql.useMutation<RegisterMutation, RegisterMutationVariables>(RegisterDocument);
 };
+export const UpdatePostDocument = gql`
+    mutation UpdatePost($id: Int!, $text: String, $title: String) {
+  updatePost(id: $id, title: $title, text: $text) {
+    text
+    point
+    id
+    title
+  }
+}
+    `;
+
+export function useUpdatePostMutation() {
+  return Urql.useMutation<UpdatePostMutation, UpdatePostMutationVariables>(UpdatePostDocument);
+};
 export const VoteDocument = gql`
     mutation Vote($value: Int!, $postId: Int!) {
   vote(value: $value, postId: $postId)
@@ -430,4 +497,22 @@ export const PostsDocument = gql`
 
 export function usePostsQuery(options: Omit<Urql.UseQueryArgs<PostsQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<PostsQuery>({ query: PostsDocument, ...options });
+};
+export const SinglePostDocument = gql`
+    query SinglePost($id: Int!) {
+  post(id: $id) {
+    text
+    id
+    point
+    creator {
+      username
+      id
+    }
+    title
+  }
+}
+    `;
+
+export function useSinglePostQuery(options: Omit<Urql.UseQueryArgs<SinglePostQueryVariables>, 'query'> = {}) {
+  return Urql.useQuery<SinglePostQuery>({ query: SinglePostDocument, ...options });
 };

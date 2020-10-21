@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Heading, Link, Stack, Text } from "@chakra-ui/core";
+import { Button, Flex, Heading, Link, Stack, Text } from "@chakra-ui/core";
 import { withUrqlClient } from "next-urql";
 import { usePostsQuery } from "../generated/graphql";
 import { createUrqlClient } from "../utils/createUrqlClient";
@@ -25,18 +25,15 @@ const Index = () => {
     <Layout>
       <Flex justifyContent="space-between">
         <Heading>Posts</Heading>
-        <NextLink href="/create-post">
-          <Link>Create Post</Link>
-        </NextLink>
       </Flex>
       {fetching && !data ? (
         <div>Loading...</div>
       ) : (
         <>
           <Stack spacing={8}>
-            {data?.posts.posts?.map((post) => (
-              <Post post={post} key={post.id} />
-            ))}
+            {data?.posts.posts?.map((post) =>
+              !post ? null : <Post post={post} key={post.id} />
+            )}
           </Stack>
         </>
       )}

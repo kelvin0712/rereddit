@@ -1,6 +1,14 @@
-import { Box, Flex, Heading, IconButton, Text } from "@chakra-ui/core";
+import { Box, Flex, IconButton, Link, Text } from "@chakra-ui/core";
 import { useState } from "react";
-import { PostFragmentFragment, useVoteMutation } from "../generated/graphql";
+import {
+  PostFragmentFragment,
+  useDeletePostMutation,
+  useMeQuery,
+  useVoteMutation,
+} from "../generated/graphql";
+import NextLink from "next/link";
+import { withUrqlClient } from "next-urql";
+import { createUrqlClient } from "../utils/createUrqlClient";
 
 interface PostProps {
   post: PostFragmentFragment;
@@ -10,7 +18,9 @@ const Post: React.FC<PostProps> = ({ post }) => {
   const [updootLoading, setUpdootLoading] = useState<
     "updoot-loading" | "downdoot-loading" | "not-loading"
   >("not-loading");
+  const [{ data }] = useMeQuery();
   const [, vote] = useVoteMutation();
+  const [, deletePost] = useDeletePostMutation();
   return (
     <Box p={5} shadow="md" borderWidth="1px" flex="1" rounded="md">
       <Flex>
@@ -52,14 +62,38 @@ const Post: React.FC<PostProps> = ({ post }) => {
             variantColor={post.point === -1 ? "red" : undefined}
           />
         </Flex>
-        <Box>
-          <Heading fontSize="xl">{post.title}</Heading>
+        <Flex flex={1} flexDirection="column">
+          <NextLink href={`/post/${post.id}`}>
+            <Link fontWeight="bold" fontSize="xl">
+              {post.title}
+            </Link>
+          </NextLink>
           <Text mb={4}>Posted by {post.creator.username}</Text>
-          <Text mt={4}>{post.textSnippet}</Text>
-        </Box>
+          <Flex flex={1}>
+            <Text mt={4}>{post.textSnippet}</Text>
+            {data?.me?.id === post.creator.id ? (
+              <Box ml="auto">
+                <NextLink href={`post/edit/${post.id}`}>
+                  <IconButton
+                    as={Link}
+                    mr={2}
+                    aria-label="Edit Post"
+                    icon="edit"
+                  />
+                </NextLink>
+                <IconButton
+                  ml="auto"
+                  aria-label="Delete Post"
+                  icon="delete"
+                  onClick={() => deletePost({ id: post.id })}
+                />
+              </Box>
+            ) : null}
+          </Flex>
+        </Flex>
       </Flex>
     </Box>
   );
 };
 
-export default Post;
+export default withUrqlClient(createUrqlClient)(Post);

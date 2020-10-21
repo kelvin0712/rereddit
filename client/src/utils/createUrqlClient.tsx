@@ -7,12 +7,14 @@ import {
   RegisterMutation,
   LogoutMutation,
   VoteMutationVariables,
+  DeletePostMutationVariables,
 } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
 import { pipe, tap } from "wonka";
 import { Exchange } from "urql";
 import Router from "next/router";
 import gql from "graphql-tag";
+import { isServerSide } from "./isServerSide";
 
 const cursorPagination = (): Resolver => {
   return (_parent, fieldArgs, cache, info) => {
@@ -73,104 +75,121 @@ export const errorExchange: Exchange = ({ forward }) => (ops$) => {
   );
 };
 
-export const createUrqlClient = (ssrExchange: any) => ({
-  url: "http://localhost:4000/graphql",
+export const createUrqlClient = (ssrExchange: any, ctx: any) => {
+  let cookie = "";
+  if (isServerSide()) {
+    cookie = ctx?.req?.headers?.cookie; // send cookie to the server next.js for it to varify and do ssr
+  }
+  return {
+    url: "http://localhost:4000/graphql",
 
-  // Send cookie
-  fetchOptions: {
-    credentials: "include" as const,
-  },
+    // Send cookie
+    fetchOptions: {
+      credentials: "include" as const,
+      headers: cookie
+        ? {
+            cookie,
+          }
+        : undefined,
+    },
 
-  exchanges: [
-    dedupExchange,
-    cacheExchange({
-      keys: {
-        PaginatedPosts: () => null,
-      },
-      resolvers: {
-        Query: {
-          posts: cursorPagination(),
+    exchanges: [
+      dedupExchange,
+      cacheExchange({
+        keys: {
+          PaginatedPosts: () => null,
         },
-      },
-      updates: {
-        Mutation: {
-          vote: (_result, args, cache, info) => {
-            const { postId, value } = args as VoteMutationVariables;
-            const data = cache.readFragment(
-              gql`
-                fragment _ on Post {
-                  id
-                  point
-                }
-              `,
-              { id: postId } as any
-            );
-            console.log(data);
-            if (data) {
-              const newPoint = (data.point as number) + value;
-              cache.writeFragment(
+        resolvers: {
+          Query: {
+            posts: cursorPagination(),
+          },
+        },
+        updates: {
+          Mutation: {
+            deletePost: (_result, args, cache, info) => {
+              cache.invalidate({
+                __typename: "Post",
+                id: (args as DeletePostMutationVariables).id,
+              });
+            },
+            vote: (_result, args, cache, info) => {
+              const { postId, value } = args as VoteMutationVariables;
+              const data = cache.readFragment(
                 gql`
-                  fragment newpoint on Post {
+                  fragment _ on Post {
+                    id
                     point
                   }
                 `,
-                { id: postId, point: newPoint } as any
+                { id: postId } as any
               );
-            }
-          },
-          createPost: (_result, args, cache, info) => {
-            const allFields = cache.inspectFields("Query");
-            // Filter the queries that we dont need
-            const fieldInfos = allFields.filter(
-              (info) => info.fieldName === "posts"
-            );
-            fieldInfos.forEach((field) => {
-              cache.invalidate("Query", "posts", field.arguments || {});
-            });
-          },
-          logout: (_result, args, cache, info) => {
-            betterUpdateQuery<LogoutMutation, MeQuery>(
-              cache,
-              { query: MeDocument },
-              _result,
-              () => {
-                return { me: null };
+              console.log(data);
+              if (data) {
+                const newPoint = (data.point as number) + value;
+                cache.writeFragment(
+                  gql`
+                    fragment newpoint on Post {
+                      point
+                    }
+                  `,
+                  { id: postId, point: newPoint } as any
+                );
               }
-            );
-          },
-          login: (_result, args, cache, info) => {
-            betterUpdateQuery<LoginMutation, MeQuery>(
-              cache,
-              { query: MeDocument },
-              _result,
-              (result, query) => {
-                if (result.login.errors) {
-                  return query;
-                } else {
-                  return { me: result.login.user };
+            },
+            createPost: (_result, args, cache, info) => {
+              const allFields = cache.inspectFields("Query");
+              // Filter the queries that we dont need
+              const fieldInfos = allFields.filter(
+                (info) => info.fieldName === "posts"
+              );
+              fieldInfos.forEach((field) => {
+                cache.invalidate("Query", "posts", field.arguments || {});
+              });
+            },
+            logout: (_result, args, cache, info) => {
+              betterUpdateQuery<LogoutMutation, MeQuery>(
+                cache,
+                { query: MeDocument },
+                _result,
+                () => {
+                  return { me: null };
                 }
-              }
-            );
-          },
-          register: (_result, args, cache, info) => {
-            betterUpdateQuery<RegisterMutation, MeQuery>(
-              cache,
-              { query: MeDocument },
-              _result,
-              (result, query) => {
-                if (result.register.errors) {
-                  return query;
-                } else {
-                  return { me: result.register.user };
+              );
+            },
+            login: (_result, args, cache, info) => {
+              betterUpdateQuery<LoginMutation, MeQuery>(
+                cache,
+                { query: MeDocument },
+                _result,
+                (result, query) => {
+                  if (result.login.errors) {
+                    return query;
+                  } else {
+                    return { me: result.login.user };
+                  }
                 }
-              }
-            );
+              );
+            },
+            register: (_result, args, cache, info) => {
+              betterUpdateQuery<RegisterMutation, MeQuery>(
+                cache,
+                { query: MeDocument },
+                _result,
+                (result, query) => {
+                  if (result.register.errors) {
+                    return query;
+                  } else {
+                    return { me: result.register.user };
+                  }
+                }
+              );
+            },
           },
         },
-      },
-    }),
-    errorExchange,
-    ssrExchange,
-    fetchExchange,
-  ],
-});
+      }),
+      errorExchange,
+      ssrExchange,
+      fetchExchange,
+    ],
+  };
+};

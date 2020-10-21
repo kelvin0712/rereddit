@@ -29,6 +29,7 @@ const User_1 = require("./entities/User");
 const Post_1 = require("./entities/Post");
 const path_1 = __importDefault(require("path"));
 const Updoot_1 = require("./entities/Updoot");
+const createUserLoader_1 = require("./utils/createUserLoader");
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const conn = yield typeorm_1.createConnection({
         type: "postgres",
@@ -70,7 +71,12 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             resolvers: [hello_1.HelloResolver, post_1.PostResolver, user_1.UserResolver],
             validate: false,
         }),
-        context: ({ req, res }) => ({ req, res, redis }),
+        context: ({ req, res }) => ({
+            req,
+            res,
+            redis,
+            userLoader: createUserLoader_1.createUserLoader(),
+        }),
     });
     apolloServer.applyMiddleware({ app, cors: false });
     app.listen(4000, () => {
