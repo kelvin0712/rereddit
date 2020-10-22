@@ -61,6 +61,18 @@ let PostResolver = class PostResolver {
     creator(post, { userLoader }) {
         return userLoader.load(post.creatorId);
     }
+    voteStatus(post, { updootLoader, req }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!req.session.userId) {
+                return null;
+            }
+            const updoot = yield updootLoader.load({
+                postId: post.id,
+                userId: req.session.userId,
+            });
+            return updoot ? updoot.value : null;
+        });
+    }
     vote(postId, value, { req }) {
         return __awaiter(this, void 0, void 0, function* () {
             const isUpdoot = value !== -1;
@@ -166,6 +178,14 @@ __decorate([
     __metadata("design:paramtypes", [Post_1.Post, Object]),
     __metadata("design:returntype", void 0)
 ], PostResolver.prototype, "creator", null);
+__decorate([
+    type_graphql_1.FieldResolver(() => type_graphql_1.Int, { nullable: true }),
+    __param(0, type_graphql_1.Root()),
+    __param(1, type_graphql_1.Ctx()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Post_1.Post, Object]),
+    __metadata("design:returntype", Promise)
+], PostResolver.prototype, "voteStatus", null);
 __decorate([
     type_graphql_1.Mutation(() => Boolean),
     type_graphql_1.UseMiddleware(isAuth_1.isAuth),

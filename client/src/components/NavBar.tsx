@@ -2,10 +2,11 @@ import { Flex, Box, Link, Button, Heading } from "@chakra-ui/core";
 import NextLink from "next/link";
 import { useRouter } from "next/router";
 import { useMeQuery, useLogoutMutation } from "../generated/graphql";
+import { isServerSide } from "../utils/isServerSide";
 
 const NavBar = () => {
   const [{ data, fetching }] = useMeQuery({
-    // pause: isServerSide() // fetch the query in the browser => not ssr
+    pause: isServerSide(), // fetch the query in the browser => not ssr
   });
   const [{ fetching: logoutFetching }, logout] = useLogoutMutation();
 

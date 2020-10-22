@@ -119,20 +119,26 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
                   fragment _ on Post {
                     id
                     point
+                    voteStatus
                   }
                 `,
                 { id: postId } as any
               );
-              console.log(data);
+
               if (data) {
-                const newPoint = (data.point as number) + value;
+                if (data.voteStatus === value) {
+                  return;
+                }
+                const newPoint =
+                  (data.point as number) + (!data.voteStatus ? 1 : 2) * value;
                 cache.writeFragment(
                   gql`
                     fragment newpoint on Post {
                       point
+                      voteStatus
                     }
                   `,
-                  { id: postId, point: newPoint } as any
+                  { id: postId, point: newPoint, voteStatus: value } as any
                 );
               }
             },
@@ -169,6 +175,16 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
                   }
                 }
               );
+
+              // Invalidate posts when login
+              const allFields = cache.inspectFields("Query");
+              // Filter the queries that we dont need
+              const fieldInfos = allFields.filter(
+                (info) => info.fieldName === "posts"
+              );
+              fieldInfos.forEach((field) => {
+                cache.invalidate("Query", "posts", field.arguments || {});
+              });
             },
             register: (_result, args, cache, info) => {
               betterUpdateQuery<RegisterMutation, MeQuery>(

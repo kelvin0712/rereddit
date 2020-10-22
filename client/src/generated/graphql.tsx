@@ -148,7 +148,7 @@ export type ErrorFragmentFragment = (
 
 export type PostFragmentFragment = (
   { __typename?: 'Post' }
-  & Pick<Post, 'id' | 'title' | 'textSnippet' | 'point' | 'createdAt'>
+  & Pick<Post, 'id' | 'title' | 'textSnippet' | 'point' | 'createdAt' | 'voteStatus'>
   & { creator: (
     { __typename?: 'User' }
     & Pick<User, 'id' | 'username'>
@@ -262,8 +262,8 @@ export type RegisterMutation = (
 
 export type UpdatePostMutationVariables = Exact<{
   id: Scalars['Int'];
-  text?: Maybe<Scalars['String']>;
-  title?: Maybe<Scalars['String']>;
+  text: Scalars['String'];
+  title: Scalars['String'];
 }>;
 
 
@@ -271,7 +271,7 @@ export type UpdatePostMutation = (
   { __typename?: 'Mutation' }
   & { updatePost?: Maybe<(
     { __typename?: 'Post' }
-    & Pick<Post, 'text' | 'point' | 'id' | 'title'>
+    & Pick<Post, 'id' | 'text' | 'textSnippet' | 'title'>
   )> }
 );
 
@@ -345,6 +345,7 @@ export const PostFragmentFragmentDoc = gql`
   textSnippet
   point
   createdAt
+  voteStatus
   creator {
     id
     username
@@ -451,11 +452,11 @@ export function useRegisterMutation() {
   return Urql.useMutation<RegisterMutation, RegisterMutationVariables>(RegisterDocument);
 };
 export const UpdatePostDocument = gql`
-    mutation UpdatePost($id: Int!, $text: String, $title: String) {
+    mutation UpdatePost($id: Int!, $text: String!, $title: String!) {
   updatePost(id: $id, title: $title, text: $text) {
-    text
-    point
     id
+    text
+    textSnippet
     title
   }
 }

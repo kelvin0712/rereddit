@@ -17,6 +17,7 @@ import { Post } from "./entities/Post";
 import path from "path";
 import { Updoot } from "./entities/Updoot";
 import { createUserLoader } from "./utils/createUserLoader";
+import { createVoteStatusLoader } from "./utils/createVoteStatusLoader";
 
 const main = async () => {
   const conn = await createConnection({
@@ -81,6 +82,7 @@ const main = async () => {
       res,
       redis,
       userLoader: createUserLoader(),
+      updootLoader: createVoteStatusLoader(),
     }),
   });
 

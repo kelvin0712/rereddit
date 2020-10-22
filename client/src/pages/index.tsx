@@ -1,11 +1,10 @@
-import { Button, Flex, Heading, Link, Stack, Text } from "@chakra-ui/core";
+import { Button, Flex, Heading, Stack } from "@chakra-ui/core";
 import { withUrqlClient } from "next-urql";
+import { useState } from "react";
+import Layout from "../components/Layout";
+import Post from "../components/Post";
 import { usePostsQuery } from "../generated/graphql";
 import { createUrqlClient } from "../utils/createUrqlClient";
-import NextLink from "next/link";
-import Layout from "../components/Layout";
-import { useState } from "react";
-import Post from "../components/Post";
 
 const Index = () => {
   const [variables, setVariables] = useState({

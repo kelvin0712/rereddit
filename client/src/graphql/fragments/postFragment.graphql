@@ -4,6 +4,7 @@ fragment postFragment on Post {
   textSnippet
   point
   createdAt
+  voteStatus
   creator {
     id
     username

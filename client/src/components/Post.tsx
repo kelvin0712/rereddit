@@ -7,8 +7,6 @@ import {
   useVoteMutation,
 } from "../generated/graphql";
 import NextLink from "next/link";
-import { withUrqlClient } from "next-urql";
-import { createUrqlClient } from "../utils/createUrqlClient";
 
 interface PostProps {
   post: PostFragmentFragment;
@@ -35,7 +33,7 @@ const Post: React.FC<PostProps> = ({ post }) => {
             size="sm"
             icon="chevron-up"
             onClick={async () => {
-              if (post.point === 1) {
+              if (post.voteStatus === 1) {
                 return;
               }
               setUpdootLoading("updoot-loading");
@@ -43,7 +41,7 @@ const Post: React.FC<PostProps> = ({ post }) => {
               setUpdootLoading("not-loading");
             }}
             isLoading={updootLoading === "updoot-loading"}
-            variantColor={post.point === 1 ? "green" : undefined}
+            variantColor={post.voteStatus === 1 ? "green" : undefined}
           />
           {post.point}
           <IconButton
@@ -51,7 +49,7 @@ const Post: React.FC<PostProps> = ({ post }) => {
             size="sm"
             icon="chevron-down"
             onClick={async () => {
-              if (post.point === -1) {
+              if (post.voteStatus === -1) {
                 return;
               }
               setUpdootLoading("downdoot-loading");
@@ -59,7 +57,7 @@ const Post: React.FC<PostProps> = ({ post }) => {
               setUpdootLoading("not-loading");
             }}
             isLoading={updootLoading === "downdoot-loading"}
-            variantColor={post.point === -1 ? "red" : undefined}
+            variantColor={post.voteStatus === -1 ? "red" : undefined}
           />
         </Flex>
         <Flex flex={1} flexDirection="column">
@@ -96,4 +94,4 @@ const Post: React.FC<PostProps> = ({ post }) => {
   );
 };
 
-export default withUrqlClient(createUrqlClient)(Post);
+export default Post;
