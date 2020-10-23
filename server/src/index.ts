@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import "dotenv-safe/config";
 import { COOKIE_NAME, __prod__ } from "./constants";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
@@ -22,13 +23,10 @@ import { createVoteStatusLoader } from "./utils/createVoteStatusLoader";
 const main = async () => {
   const conn = await createConnection({
     type: "postgres",
-    database: "reredis2",
-    username: "postgres",
-    password: "bi071297",
+    url: process.env.DATABASE_URL,
     logging: true,
-    synchronize: true,
+    // synchronize: true,
     migrations: [path.join(__dirname, "./migrations/*")],
-    port: 5433,
     entities: [User, Post, Updoot],
   });
 
@@ -39,18 +37,17 @@ const main = async () => {
   const app = express();
 
   // Create redis connection
-  const redis = new Redis({
-    host: "0.0.0.0",
-    port: 6379,
-  });
+  const redis = new Redis(process.env.REDIS_URL);
 
   const RedisStore = connectRedis(session);
 
+  // Proxy
+  app.set("trust proxy", 1);
   // Apply cors globally
   app.use(
     cors({
       credentials: true,
-      origin: "http://localhost:3000",
+      origin: process.env.CORS_ORIGIN,
     })
   );
 
@@ -64,9 +61,10 @@ const main = async () => {
         httpOnly: true,
         secure: __prod__, // cookie only works in https
         sameSite: "lax",
+        domain: __prod__ ? ".bugslover.com" : undefined,
       },
       saveUninitialized: false,
-      secret: "Thisfdsajklfjdlsajiwrejfkdlsjflkdsjalkj",
+      secret: process.env.SECRET,
       resave: false,
     })
   );
@@ -89,7 +87,7 @@ const main = async () => {
   // Create a graphql end point on express
   apolloServer.applyMiddleware({ app, cors: false });
 
-  app.listen(4000, () => {
+  app.listen(parseInt(process.env.PORT), () => {
     console.log("Server started on localhost:4000");
   });
 };

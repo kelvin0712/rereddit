@@ -81,7 +81,7 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
     cookie = ctx?.req?.headers?.cookie; // send cookie to the server next.js for it to varify and do ssr
   }
   return {
-    url: "http://localhost:4000/graphql",
+    url: process.env.NEXT_PUBLIC_API_URL as string,
 
     // Send cookie
     fetchOptions: {
@@ -106,13 +106,13 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
         },
         updates: {
           Mutation: {
-            deletePost: (_result, args, cache, info) => {
+            deletePost: (_result, args, cache, _) => {
               cache.invalidate({
                 __typename: "Post",
                 id: (args as DeletePostMutationVariables).id,
               });
             },
-            vote: (_result, args, cache, info) => {
+            vote: (_result, args, cache, _) => {
               const { postId, value } = args as VoteMutationVariables;
               const data = cache.readFragment(
                 gql`
@@ -142,7 +142,7 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
                 );
               }
             },
-            createPost: (_result, args, cache, info) => {
+            createPost: (_result, _, cache) => {
               const allFields = cache.inspectFields("Query");
               // Filter the queries that we dont need
               const fieldInfos = allFields.filter(
@@ -152,7 +152,7 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
                 cache.invalidate("Query", "posts", field.arguments || {});
               });
             },
-            logout: (_result, args, cache, info) => {
+            logout: (_result, _, cache) => {
               betterUpdateQuery<LogoutMutation, MeQuery>(
                 cache,
                 { query: MeDocument },
@@ -162,7 +162,7 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
                 }
               );
             },
-            login: (_result, args, cache, info) => {
+            login: (_result, _, cache) => {
               betterUpdateQuery<LoginMutation, MeQuery>(
                 cache,
                 { query: MeDocument },
@@ -186,7 +186,7 @@ export const createUrqlClient = (ssrExchange: any, ctx: any) => {
                 cache.invalidate("Query", "posts", field.arguments || {});
               });
             },
-            register: (_result, args, cache, info) => {
+            register: (_result, _, cache) => {
               betterUpdateQuery<RegisterMutation, MeQuery>(
                 cache,
                 { query: MeDocument },

@@ -1,4 +1,3 @@
-import { route } from "next/dist/next-server/server/router";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import { useMeQuery } from "../generated/graphql";

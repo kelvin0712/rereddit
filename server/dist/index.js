@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 require("reflect-metadata");
+require("dotenv-safe/config");
 const constants_1 = require("./constants");
 const express_1 = __importDefault(require("express"));
 const apollo_server_express_1 = require("apollo-server-express");
@@ -34,25 +35,19 @@ const createVoteStatusLoader_1 = require("./utils/createVoteStatusLoader");
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const conn = yield typeorm_1.createConnection({
         type: "postgres",
-        database: "reredis2",
-        username: "postgres",
-        password: "bi071297",
+        url: process.env.DATABASE_URL,
         logging: true,
-        synchronize: true,
         migrations: [path_1.default.join(__dirname, "./migrations/*")],
-        port: 5433,
         entities: [User_1.User, Post_1.Post, Updoot_1.Updoot],
     });
     yield conn.runMigrations();
     const app = express_1.default();
-    const redis = new ioredis_1.default({
-        host: "0.0.0.0",
-        port: 6379,
-    });
+    const redis = new ioredis_1.default(process.env.REDIS_URL);
     const RedisStore = connect_redis_1.default(express_session_1.default);
+    app.set("trust proxy", 1);
     app.use(cors_1.default({
         credentials: true,
-        origin: "http://localhost:3000",
+        origin: process.env.CORS_ORIGIN,
     }));
     app.use(express_session_1.default({
         name: constants_1.COOKIE_NAME,
@@ -62,9 +57,10 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
             httpOnly: true,
             secure: constants_1.__prod__,
             sameSite: "lax",
+            domain: constants_1.__prod__ ? ".bugslover.com" : undefined,
         },
         saveUninitialized: false,
-        secret: "Thisfdsajklfjdlsajiwrejfkdlsjflkdsjalkj",
+        secret: process.env.SECRET,
         resave: false,
     }));
     const apolloServer = new apollo_server_express_1.ApolloServer({
@@ -81,7 +77,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         }),
     });
     apolloServer.applyMiddleware({ app, cors: false });
-    app.listen(4000, () => {
+    app.listen(parseInt(process.env.PORT), () => {
         console.log("Server started on localhost:4000");
     });
 });
